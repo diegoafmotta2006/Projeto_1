@@ -1,0 +1,8 @@
+# Chaves privadas e senhas
+*.jks
+*.keystore
+
+# Arquivos compilados e APKs
+build/
+app/**/*.class
+local.properties
