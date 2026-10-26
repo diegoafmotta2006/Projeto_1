@@ -2,9 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.exemplo.projeto1">
 
+    <uses-sdk
+        android:minSdkVersion="23"
+        android:targetSdkVersion="28" />
+
     <application
-        android:label="Meu Primeiro App"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:label="Meu Contador"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:allowBackup="false">
 
         <activity
             android:name="com.exemplo.projeto1.MainActivity"
@@ -18,4 +23,3 @@
         </activity>
     </application>
 </manifest>
-
