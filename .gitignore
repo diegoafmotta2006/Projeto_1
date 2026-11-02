@@ -1,8 +1,11 @@
 # Chaves privadas e senhas
 *.jks
 *.keystore
+*.p12
+.release-keystore.txt
 
-# Arquivos compilados e APKs
+# Arquivos compilados e APKs (menos dist/, que e distribuido)
 build/
 app/**/*.class
 local.properties
+.gradle/

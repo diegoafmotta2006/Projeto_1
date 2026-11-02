@@ -1,7 +1,7 @@
-
 package com.exemplo.projeto1;
 
 import android.app.Activity;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -12,8 +12,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -21,12 +20,12 @@ public class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView anosMeses, dias, horas, minutos, segundos, millis;
 
-    private static final LocalDateTime INICIO_ESCURO =
-            LocalDateTime.of(2025, 5, 22, 0, 0, 0);
-    private static final LocalDateTime INICIO_CLARO =
-            LocalDateTime.of(2025, 8, 12, 0, 0, 0);
+    private static final Calendar INICIO_ESCURO =
+            criarData(2025, Calendar.MAY, 22);
+    private static final Calendar INICIO_CLARO =
+            criarData(2025, Calendar.AUGUST, 12);
 
-    private LocalDateTime inicio = INICIO_ESCURO;
+    private Calendar inicio = INICIO_ESCURO;
     private boolean modoClaro = false;
 
     private final Runnable atualizar = new Runnable() {
@@ -36,6 +35,13 @@ public class MainActivity extends Activity {
             handler.postDelayed(this, 10);
         }
     };
+
+    private static Calendar criarData(int ano, int mes, int dia) {
+        Calendar c = Calendar.getInstance();
+        c.set(ano, mes, dia, 0, 0, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        return c;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,12 +58,16 @@ public class MainActivity extends Activity {
         String corMilli = modoClaro ? "#6E6E73" : "#8E8E93";
         String corMilliLegenda = modoClaro ? "#8E8E93" : "#666666";
 
-        getWindow().setStatusBarColor(corFundo);
-        getWindow().setNavigationBarColor(corFundo);
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | (modoClaro ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0)
-        );
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(corFundo);
+            getWindow().setNavigationBarColor(corFundo);
+        }
+
+        int flags = View.SYSTEM_UI_FLAG_FULLSCREEN;
+        if (modoClaro && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        }
+        getWindow().getDecorView().setSystemUiVisibility(flags);
 
         LinearLayout tela = new LinearLayout(this);
         tela.setOrientation(LinearLayout.VERTICAL);
@@ -155,10 +165,43 @@ public class MainActivity extends Activity {
         pai.addView(v, p);
     }
 
-    private void atualizarContador() {
-        LocalDateTime agora = LocalDateTime.now();
+    private static long avancar(Calendar cursor, int campo,
+                                long estimativa, Calendar limite) {
+        if (estimativa < 0) {
+            estimativa = 0;
+        }
 
-        if (agora.isBefore(inicio)) {
+        Calendar atual = (Calendar) cursor.clone();
+        atual.add(campo, (int) estimativa);
+
+        while (atual.after(limite)) {
+            atual.add(campo, -1);
+            estimativa--;
+            if (estimativa < 0) {
+                estimativa = 0;
+                atual.setTimeInMillis(cursor.getTimeInMillis());
+                break;
+            }
+        }
+
+        while (true) {
+            Calendar proximo = (Calendar) atual.clone();
+            proximo.add(campo, 1);
+            if (proximo.after(limite)) {
+                break;
+            }
+            atual = proximo;
+            estimativa++;
+        }
+
+        cursor.setTimeInMillis(atual.getTimeInMillis());
+        return estimativa;
+    }
+
+    private void atualizarContador() {
+        Calendar agora = Calendar.getInstance();
+
+        if (agora.before(inicio)) {
             anosMeses.setText("00 anos, 00 meses");
             dias.setText("00 dias");
             horas.setText("00");
@@ -168,25 +211,36 @@ public class MainActivity extends Activity {
             return;
         }
 
-        long anos = ChronoUnit.YEARS.between(inicio, agora);
-        LocalDateTime marco = inicio.plusYears(anos);
+        Calendar cursor = (Calendar) inicio.clone();
 
-        long meses = ChronoUnit.MONTHS.between(marco, agora);
-        marco = marco.plusMonths(meses);
+        long anos = avancar(cursor, Calendar.YEAR,
+                agora.get(Calendar.YEAR) - cursor.get(Calendar.YEAR), agora);
 
-        long d = ChronoUnit.DAYS.between(marco, agora);
-        marco = marco.plusDays(d);
+        long meses = avancar(cursor, Calendar.MONTH,
+                (agora.get(Calendar.YEAR) - cursor.get(Calendar.YEAR)) * 12L
+                        + (agora.get(Calendar.MONTH) - cursor.get(Calendar.MONTH)),
+                agora);
 
-        long h = ChronoUnit.HOURS.between(marco, agora);
-        marco = marco.plusHours(h);
+        long d = avancar(cursor, Calendar.DAY_OF_MONTH,
+                (agora.getTimeInMillis() - cursor.getTimeInMillis()) / 86400000L,
+                agora);
 
-        long m = ChronoUnit.MINUTES.between(marco, agora);
-        marco = marco.plusMinutes(m);
+        long h = avancar(cursor, Calendar.HOUR_OF_DAY,
+                (agora.getTimeInMillis() - cursor.getTimeInMillis()) / 3600000L,
+                agora);
 
-        long s = ChronoUnit.SECONDS.between(marco, agora);
-        marco = marco.plusSeconds(s);
+        long m = avancar(cursor, Calendar.MINUTE,
+                (agora.getTimeInMillis() - cursor.getTimeInMillis()) / 60000L,
+                agora);
 
-        long ms = ChronoUnit.MILLIS.between(marco, agora);
+        long s = avancar(cursor, Calendar.SECOND,
+                (agora.getTimeInMillis() - cursor.getTimeInMillis()) / 1000L,
+                agora);
+
+        long ms = agora.getTimeInMillis() - cursor.getTimeInMillis();
+        if (ms < 0) {
+            ms = 0;
+        }
 
         anosMeses.setText(String.format(Locale.getDefault(),
                 "%02d anos, %02d meses", anos, meses));
@@ -210,4 +264,3 @@ public class MainActivity extends Activity {
         handler.removeCallbacks(atualizar);
     }
 }
-
