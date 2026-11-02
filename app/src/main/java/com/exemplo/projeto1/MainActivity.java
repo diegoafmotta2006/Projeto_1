@@ -21,8 +21,13 @@ public class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView anosMeses, dias, horas, minutos, segundos, millis;
 
-    private final LocalDateTime inicio =
+    private static final LocalDateTime INICIO_ESCURO =
             LocalDateTime.of(2025, 5, 22, 0, 0, 0);
+    private static final LocalDateTime INICIO_CLARO =
+            LocalDateTime.of(2025, 8, 12, 0, 0, 0);
+
+    private LocalDateTime inicio = INICIO_ESCURO;
+    private boolean modoClaro = false;
 
     private final Runnable atualizar = new Runnable() {
         @Override
@@ -36,36 +41,55 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getWindow().setStatusBarColor(Color.BLACK);
-        getWindow().setNavigationBarColor(Color.BLACK);
+        montarTela();
+    }
+
+    private void montarTela() {
+        int corFundo = modoClaro ? Color.WHITE : Color.BLACK;
+        String corPrincipal = modoClaro ? "#000000" : "#FFFFFF";
+        String corSeparador = modoClaro ? "#999999" : "#666666";
+        String corLegenda = modoClaro ? "#6E6E73" : "#8E8E93";
+        String corMilli = modoClaro ? "#6E6E73" : "#8E8E93";
+        String corMilliLegenda = modoClaro ? "#8E8E93" : "#666666";
+
+        getWindow().setStatusBarColor(corFundo);
+        getWindow().setNavigationBarColor(corFundo);
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | (modoClaro ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0)
         );
 
         LinearLayout tela = new LinearLayout(this);
         tela.setOrientation(LinearLayout.VERTICAL);
         tela.setGravity(Gravity.CENTER);
         tela.setPadding(16, 20, 16, 20);
-        tela.setBackgroundColor(Color.BLACK);
+        tela.setBackgroundColor(corFundo);
+        tela.setClickable(true);
+        tela.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alternarModo();
+            }
+        });
 
-        anosMeses = criarTexto(26, "#FFFFFF");
+        anosMeses = criarTexto(26, corPrincipal);
         adicionar(tela, anosMeses, 0, 0, 10);
 
-        dias = criarTexto(23, "#FFFFFF");
+        dias = criarTexto(23, corPrincipal);
         adicionar(tela, dias, 0, 0, 32);
 
         LinearLayout linha = new LinearLayout(this);
         linha.setOrientation(LinearLayout.HORIZONTAL);
         linha.setGravity(Gravity.CENTER);
 
-        horas = criarTexto(29, "#FFFFFF");
-        minutos = criarTexto(29, "#FFFFFF");
-        segundos = criarTexto(29, "#FFFFFF");
+        horas = criarTexto(29, corPrincipal);
+        minutos = criarTexto(29, corPrincipal);
+        segundos = criarTexto(29, corPrincipal);
 
         adicionar(linha, horas, 1, 0, 0);
-        adicionar(linha, criarTextoCor(":", 27, "#666666"), 0, 0, 0);
+        adicionar(linha, criarTextoCor(":", 27, corSeparador), 0, 0, 0);
         adicionar(linha, minutos, 1, 0, 0);
-        adicionar(linha, criarTextoCor(":", 27, "#666666"), 0, 0, 0);
+        adicionar(linha, criarTextoCor(":", 27, corSeparador), 0, 0, 0);
         adicionar(linha, segundos, 1, 0, 0);
 
         tela.addView(linha, new LinearLayout.LayoutParams(
@@ -77,22 +101,31 @@ public class MainActivity extends Activity {
         legendas.setOrientation(LinearLayout.HORIZONTAL);
         legendas.setGravity(Gravity.CENTER);
 
-        adicionar(legendas, criarTextoCor("HORAS", 10, "#8E8E93"), 1, 0, 0);
-        adicionar(legendas, criarTextoCor("MINUTOS", 10, "#8E8E93"), 1, 0, 0);
-        adicionar(legendas, criarTextoCor("SEGUNDOS", 10, "#8E8E93"), 1, 0, 0);
+        adicionar(legendas, criarTextoCor("HORAS", 10, corLegenda), 1, 0, 0);
+        adicionar(legendas, criarTextoCor("MINUTOS", 10, corLegenda), 1, 0, 0);
+        adicionar(legendas, criarTextoCor("SEGUNDOS", 10, corLegenda), 1, 0, 0);
 
         tela.addView(legendas, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
 
-        millis = criarTextoCor(".000", 21, "#8E8E93");
+        millis = criarTextoCor(".000", 21, corMilli);
         adicionar(tela, millis, 0, 16, 0);
 
-        adicionar(tela, criarTextoCor("MILISSEGUNDOS", 10, "#666666"),
+        adicionar(tela, criarTextoCor("MILISSEGUNDOS", 10, corMilliLegenda),
                 0, 4, 0);
 
         setContentView(tela);
+    }
+
+    private void alternarModo() {
+        modoClaro = !modoClaro;
+
+        inicio = modoClaro ? INICIO_CLARO : INICIO_ESCURO;
+
+        montarTela();
+        atualizarContador();
     }
 
     private TextView criarTexto(float tamanho, String cor) {
